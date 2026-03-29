@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyGram — Sign In</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <!-- Background blobs -->
+  <div class="auth-blob auth-blob-1"></div>
+  <div class="auth-blob auth-blob-2"></div>
+  <div class="auth-blob auth-blob-3"></div>
+
+  <div class="auth-container">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      <div class="auth-logo-icon">📸</div>
+      <h1 class="logo-font">MyGram</h1>
+      <p>Share your world, your way</p>
+    </div>
+
+    <!-- Card -->
+    <div class="auth-card">
+
+      <!-- Tabs -->
+      <div class="tab-switcher">
+        <button class="tab-btn active" id="tab-login"  onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn"        id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-username">Username</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input class="form-input" type="text" id="login-username" placeholder="your_username" autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input class="form-input" type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+          </div>
+        </div>
+
+        <p class="error-msg" id="login-error"></p>
+        <button class="auth-submit" onclick="handleLogin()">📸 Sign In to MyGram</button>
+
+        <p class="auth-hint">
+          Don't have an account? <span onclick="switchTab('signup')">Create one free →</span>
+        </p>
+        <p class="auth-hint" style="margin-top:8px;font-size:12px;">
+          Demo: username <strong style="color:var(--accent)">luna_v</strong> / password <strong style="color:var(--accent)">demo123</strong>
+        </p>
+      </div>
+
+      <!-- SIGNUP FORM -->
+      <div id="signup-form" style="display:none">
+        <div class="form-group">
+          <label class="form-label" for="signup-username">Username</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input class="form-input" type="text" id="signup-username" placeholder="choose_a_username" autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signup-password">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input class="form-input" type="password" id="signup-password" placeholder="min 6 characters" autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signup-confirm">Confirm Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input class="form-input" type="password" id="signup-confirm" placeholder="repeat your password" autocomplete="new-password">
+          </div>
+        </div>
+
+        <p class="error-msg" id="signup-error"></p>
+        <button class="auth-submit" onclick="handleSignup()">✨ Create My Account</button>
+
+        <p class="auth-hint">
+          Already have an account? <span onclick="switchTab('login')">Sign in →</span>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/storage.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/app.js"></script>
+<script>
+  // Redirect if already logged in
+  requireGuest();
+  // Seed demo data on first visit
+  seedDemoData();
+</script>
+</body>
+</html>

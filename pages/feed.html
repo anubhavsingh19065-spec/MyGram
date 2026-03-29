@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyGram — Feed</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-logo logo-font">MyGram</div>
+
+  <nav class="nav-links">
+    <a class="nav-link active" href="feed.html">🏠 Home</a>
+    <a class="nav-link" href="explore.html">🔍 Explore</a>
+  </nav>
+
+  <div class="topbar-actions">
+    <button class="icon-btn" onclick="openPostModal()" title="New Post">✏️</button>
+    <button class="icon-btn" onclick="showToast('🔔 No new notifications')" title="Notifications">🔔</button>
+    <div class="nav-avatar" id="nav-avatar" onclick="goToMyProfile()"></div>
+  </div>
+</div>
+
+<!-- ── Page ────────────────────────────────────────────── -->
+<div class="page-wrap">
+  <div class="feed-layout">
+
+    <!-- Feed Column -->
+    <div class="feed-col">
+
+      <!-- Stories -->
+      <div class="stories-wrap">
+        <div class="stories-track" id="stories-track"></div>
+      </div>
+
+      <!-- Feed filter tabs -->
+      <div class="feed-tabs">
+        <button class="feed-tab active" id="tab-all"       onclick="setFeedTab('all')">🌍 All Posts</button>
+        <button class="feed-tab"        id="tab-following" onclick="setFeedTab('following')">👥 Following</button>
+      </div>
+
+      <!-- Create Post Bar -->
+      <div class="sidebar-card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div id="create-avatar" class="avatar" style="width:40px;height:40px;font-size:16px"></div>
+          <button class="form-input" style="cursor:pointer;text-align:left;color:var(--muted);padding:12px 16px" onclick="openPostModal()">
+            What's on your mind?
+          </button>
+          <button class="btn-primary" onclick="openPostModal()">Post</button>
+        </div>
+      </div>
+
+      <!-- Posts -->
+      <div id="posts-feed"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- My Profile Card -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">My Profile</div>
+        <div class="profile-mini">
+          <div id="sidebar-avatar" class="avatar" style="width:50px;height:50px;font-size:20px"></div>
+          <div class="profile-mini-info">
+            <div class="profile-mini-name" id="sidebar-username">—</div>
+            <div class="profile-mini-handle" id="sidebar-handle">@—</div>
+          </div>
+        </div>
+        <div class="profile-stats">
+          <div class="stat-box">
+            <div class="stat-num" id="stat-posts">0</div>
+            <div class="stat-label">Posts</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-followers">0</div>
+            <div class="stat-label">Followers</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-following">0</div>
+            <div class="stat-label">Following</div>
+          </div>
+        </div>
+        <a href="profile.html" style="display:block;margin-top:12px">
+          <button class="btn-outline" style="width:100%">View Profile</button>
+        </a>
+        <button class="logout-btn" onclick="handleLogout()">← Sign Out</button>
+      </div>
+
+      <!-- Suggestions -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">People to Follow</div>
+        <div id="suggestions-list"></div>
+      </div>
+
+      <!-- Trending Tags -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">✦ Trending</div>
+        <div class="tag-cloud" id="trending-tags"></div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- ── Post Modal ───────────────────────────────────────── -->
+<div class="modal-overlay" id="post-modal" onclick="if(event.target===this)closePostModal()">
+  <div class="modal-card">
+    <h2 class="modal-title">Share a Moment 📸</h2>
+    <p class="modal-sub">What's happening in your world?</p>
+    <textarea class="post-textarea" id="post-text" placeholder="Write your story... Use #hashtags to tag your post"></textarea>
+    <div class="emoji-row">
+      <button class="emoji-pick" onclick="addEmoji('❤️')">❤️</button>
+      <button class="emoji-pick" onclick="addEmoji('🔥')">🔥</button>
+      <button class="emoji-pick" onclick="addEmoji('🌙')">🌙</button>
+      <button class="emoji-pick" onclick="addEmoji('✨')">✨</button>
+      <button class="emoji-pick" onclick="addEmoji('🎉')">🎉</button>
+      <button class="emoji-pick" onclick="addEmoji('📸')">📸</button>
+      <button class="emoji-pick" onclick="addEmoji('🌊')">🌊</button>
+      <button class="emoji-pick" onclick="addEmoji('💫')">💫</button>
+      <button class="emoji-pick" onclick="addEmoji('🌸')">🌸</button>
+      <button class="emoji-pick" onclick="addEmoji('🎵')">🎵</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closePostModal()">Cancel</button>
+      <button class="btn-primary" style="flex:2;padding:13px" onclick="publishPost()">✨ Publish Post</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/storage.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/posts.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+requireAuth();
+seedDemoData();
+
+const user = currentUser();
+
+// Set nav avatar
+const navAv = document.getElementById('nav-avatar');
+navAv.textContent = avatarLetter(user);
+navAv.style.background = avatarColor(user);
+
+// Set sidebar
+const sideAv = document.getElementById('sidebar-avatar');
+sideAv.textContent = avatarLetter(user);
+sideAv.style.background = avatarColor(user);
+document.getElementById('sidebar-username').textContent = user;
+document.getElementById('sidebar-handle').textContent = '@' + user;
+
+const crAv = document.getElementById('create-avatar');
+crAv.textContent = avatarLetter(user);
+crAv.style.background = avatarColor(user);
+
+// Stats
+function updateSidebarStats() {
+  document.getElementById('stat-posts').textContent     = Storage.getPostsByUser(user).length;
+  document.getElementById('stat-followers').textContent = Storage.getFollowers(user).length;
+  document.getElementById('stat-following').textContent = Storage.getFollowing(user).length;
+}
+updateSidebarStats();
+
+// Stories
+function renderStories() {
+  const track = document.getElementById('stories-track');
+  const myStory = `
+    <div class="story-item" onclick="openPostModal()">
+      <div class="story-ring">
+        <div class="story-inner" style="background:${avatarColor(user)};font-size:22px">${avatarLetter(user)}</div>
+      </div>
+      <div class="story-name">Your Story</div>
+    </div>`;
+
+  const others = Storage.getUsers()
+    .filter(u => u.username !== user)
+    .slice(0, 7)
+    .map(u => `
+      <div class="story-item" onclick="showToast('📖 ${u.username}\\'s story')">
+        <div class="story-ring">
+          <div class="story-inner" style="background:${avatarColor(u.username)};font-size:18px">${avatarLetter(u.username)}</div>
+        </div>
+        <div class="story-name">${u.username}</div>
+      </div>`).join('');
+
+  track.innerHTML = myStory + others;
+}
+
+// Suggestions
+function renderSuggestions() {
+  const list = document.getElementById('suggestions-list');
+  const all = Storage.getUsers().filter(u => u.username !== user).slice(0, 4);
+  if (all.length === 0) { list.innerHTML = '<p style="color:var(--muted);font-size:13px">No users yet.</p>'; return; }
+  list.innerHTML = all.map(u => {
+    const following = Storage.isFollowing(user, u.username);
+    return `
+    <div class="suggest-item">
+      <div class="avatar" style="width:40px;height:40px;font-size:16px;background:${avatarColor(u.username)}">${avatarLetter(u.username)}</div>
+      <div class="suggest-info">
+        <div class="suggest-name">${u.username}</div>
+        <div class="suggest-meta">${Storage.getFollowers(u.username).length} followers</div>
+      </div>
+      <button class="follow-btn ${following ? 'following' : ''}" id="sugg-follow-${u.username}"
+        onclick="toggleSuggFollow('${u.username}')">${following ? 'Following' : 'Follow'}</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleSuggFollow(target) {
+  const nowFollowing = Storage.toggleFollow(user, target);
+  const btn = document.getElementById('sugg-follow-' + target);
+  btn.textContent = nowFollowing ? 'Following' : 'Follow';
+  btn.classList.toggle('following', nowFollowing);
+  updateSidebarStats();
+  showToast(nowFollowing ? '✅ Following ' + target : '👋 Unfollowed ' + target);
+}
+
+// Trending tags
+function renderTrending() {
+  const posts = Storage.getPosts();
+  const counts = {};
+  posts.forEach(p => (p.tags||[]).forEach(t => counts[t] = (counts[t]||0)+1));
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,8);
+  const wrap = document.getElementById('trending-tags');
+  if (sorted.length === 0) { wrap.innerHTML = '<span class="tag">#mygram</span><span class="tag">#vibes</span>'; return; }
+  wrap.innerHTML = sorted.map(([t]) => `<span class="tag" onclick="window.location.href='explore.html?tag=${t}'">#${t}</span>`).join('');
+}
+
+// Feed tabs
+function setFeedTab(filter) {
+  document.getElementById('tab-all').classList.toggle('active', filter === 'all');
+  document.getElementById('tab-following').classList.toggle('active', filter === 'following');
+  renderFeed(filter);
+}
+
+function goToMyProfile() { window.location.href = 'profile.html'; }
+
+// Init
+renderStories();
+renderSuggestions();
+renderTrending();
+renderFeed();
+</script>
+</body>
+</html>

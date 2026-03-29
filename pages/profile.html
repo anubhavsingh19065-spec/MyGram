@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyGram — Profile</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-logo logo-font">MyGram</div>
+  <nav class="nav-links">
+    <a class="nav-link" href="feed.html">🏠 Home</a>
+    <a class="nav-link" href="explore.html">🔍 Explore</a>
+  </nav>
+  <div class="topbar-actions">
+    <button class="icon-btn" onclick="window.location.href='feed.html'" title="Back">←</button>
+    <div class="nav-avatar" id="nav-avatar" onclick="window.location.href='profile.html'"></div>
+  </div>
+</div>
+
+<!-- ── Page ────────────────────────────────────────────── -->
+<div class="page-wrap" style="max-width:700px">
+
+  <!-- Profile Header -->
+  <div class="profile-header" id="profile-header">
+    <div class="profile-avatar-lg" id="profile-avatar-lg"></div>
+    <div class="profile-info" style="flex:1">
+      <h2 id="profile-username">—</h2>
+      <div class="handle" id="profile-handle">@—</div>
+      <div class="bio" id="profile-bio"></div>
+
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div class="profile-info-stats">
+          <div class="profile-stat">
+            <div class="profile-stat-num" id="profile-post-count">0</div>
+            <div class="profile-stat-label">Posts</div>
+          </div>
+          <div class="profile-stat" style="margin-left:20px">
+            <div class="profile-stat-num" id="profile-follower-count">0</div>
+            <div class="profile-stat-label">Followers</div>
+          </div>
+          <div class="profile-stat" style="margin-left:20px">
+            <div class="profile-stat-num" id="profile-following-count">0</div>
+            <div class="profile-stat-label">Following</div>
+          </div>
+        </div>
+
+        <div id="profile-actions" style="margin-left:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit bio section (own profile only) -->
+  <div id="edit-bio-wrap" class="sidebar-card" style="display:none;margin-bottom:16px">
+    <div class="sidebar-title">Edit Bio</div>
+    <div style="display:flex;gap:8px">
+      <input class="form-input" style="padding:10px 14px" id="bio-input" placeholder="Tell the world about yourself..." maxlength="120">
+      <button class="btn-primary" style="padding:10px 18px;white-space:nowrap" onclick="saveBio()">Save</button>
+    </div>
+  </div>
+
+  <!-- Posts Grid -->
+  <div class="sidebar-card">
+    <div class="section-head">
+      <h3 id="posts-section-title">Posts</h3>
+    </div>
+    <div class="post-grid" id="profile-grid"></div>
+    <div id="profile-no-posts" style="display:none;text-align:center;padding:40px;color:var(--muted)">
+      <div style="font-size:36px;margin-bottom:10px">📭</div>
+      No posts yet.
+    </div>
+  </div>
+
+</div>
+
+<!-- Post detail modal (click grid item) -->
+<div class="modal-overlay" id="post-detail-modal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal-card" id="post-detail-content" style="max-width:520px"></div>
+</div>
+
+<script src="../js/storage.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/posts.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+requireAuth();
+
+const me = currentUser();
+
+// Who are we viewing? (?user=xxx or own profile)
+const params = new URLSearchParams(window.location.search);
+const viewUser = params.get('user') || me;
+const isOwnProfile = viewUser === me;
+
+// Nav avatar
+const navAv = document.getElementById('nav-avatar');
+navAv.textContent = avatarLetter(me);
+navAv.style.background = avatarColor(me);
+
+// Build profile header
+function renderProfileHeader() {
+  const userData = Storage.findUser(viewUser) || { username: viewUser, bio: '', joined: Date.now() };
+  const posts      = Storage.getPostsByUser(viewUser);
+  const followers  = Storage.getFollowers(viewUser);
+  const following  = Storage.getFollowing(viewUser);
+
+  const av = document.getElementById('profile-avatar-lg');
+  av.textContent = avatarLetter(viewUser);
+  av.style.background = avatarColor(viewUser);
+
+  document.getElementById('profile-username').textContent = viewUser;
+  document.getElementById('profile-handle').textContent   = '@' + viewUser;
+  document.getElementById('profile-bio').textContent      = userData.bio || '';
+
+  document.getElementById('profile-post-count').textContent     = posts.length;
+  document.getElementById('profile-follower-count').textContent  = followers.length;
+  document.getElementById('profile-following-count').textContent = following.length;
+
+  document.title = 'MyGram — ' + viewUser;
+
+  const actionsWrap = document.getElementById('profile-actions');
+  if (isOwnProfile) {
+    actionsWrap.innerHTML = `<button class="btn-outline" onclick="toggleEditBio()">✏️ Edit Bio</button>`;
+    document.getElementById('edit-bio-wrap').querySelector('#bio-input').value = userData.bio || '';
+    document.getElementById('posts-section-title').textContent = 'Your Posts';
+  } else {
+    const isFollowing = Storage.isFollowing(me, viewUser);
+    actionsWrap.innerHTML = `
+      <button class="follow-btn ${isFollowing ? 'following' : ''}" id="profile-follow-btn"
+        onclick="toggleProfileFollow()">${isFollowing ? 'Following' : 'Follow'}</button>`;
+  }
+}
+
+function toggleProfileFollow() {
+  const nowFollowing = Storage.toggleFollow(me, viewUser);
+  const btn = document.getElementById('profile-follow-btn');
+  btn.textContent = nowFollowing ? 'Following' : 'Follow';
+  btn.classList.toggle('following', nowFollowing);
+  document.getElementById('profile-follower-count').textContent = Storage.getFollowers(viewUser).length;
+  showToast(nowFollowing ? '✅ Following ' + viewUser : '👋 Unfollowed ' + viewUser);
+}
+
+function toggleEditBio() {
+  const wrap = document.getElementById('edit-bio-wrap');
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveBio() {
+  const bio = document.getElementById('bio-input').value.trim();
+  const users = Storage.getUsers();
+  const idx = users.findIndex(u => u.username === me);
+  if (idx !== -1) { users[idx].bio = bio; Storage.saveUsers(users); }
+  document.getElementById('profile-bio').textContent = bio;
+  document.getElementById('edit-bio-wrap').style.display = 'none';
+  showToast('✅ Bio updated!');
+}
+
+// Build post grid
+function renderProfileGrid() {
+  const posts = Storage.getPostsByUser(viewUser);
+  const grid  = document.getElementById('profile-grid');
+  const noPosts = document.getElementById('profile-no-posts');
+
+  if (posts.length === 0) {
+    grid.style.display = 'none';
+    noPosts.style.display = 'block';
+    if (isOwnProfile) {
+      noPosts.innerHTML = `
+        <div style="font-size:36px;margin-bottom:10px">📷</div>
+        <p style="margin-bottom:16px">You haven't posted anything yet!</p>
+        <a href="feed.html"><button class="btn-primary">Create your first post</button></a>`;
+    }
+    return;
+  }
+
+  grid.innerHTML = posts.map(p => `
+    <div class="grid-post" onclick="openPostDetail('${p.id}')">
+      <span>${p.emoji || '✨'}</span>
+      <div class="grid-post-overlay">
+        <div class="grid-post-stat">❤️ ${(p.likes||[]).length}</div>
+        <div class="grid-post-stat">💬 ${(p.comments||[]).length}</div>
+      </div>
+    </div>`).join('');
+}
+
+// Post detail modal
+function openPostDetail(postId) {
+  const post = Storage.getPosts().find(p => p.id === postId);
+  if (!post) return;
+  document.getElementById('post-detail-content').innerHTML = buildPostCard(post);
+  document.getElementById('post-detail-modal').classList.add('show');
+}
+
+function closeDetailModal() {
+  document.getElementById('post-detail-modal').classList.remove('show');
+}
+
+// Init
+if (isOwnProfile) document.getElementById('edit-bio-wrap').style.display = 'none';
+renderProfileHeader();
+renderProfileGrid();
+</script>
+</body>
+</html>

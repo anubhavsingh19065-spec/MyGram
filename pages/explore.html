@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyGram — Explore</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-logo logo-font">MyGram</div>
+  <nav class="nav-links">
+    <a class="nav-link" href="feed.html">🏠 Home</a>
+    <a class="nav-link active" href="explore.html">🔍 Explore</a>
+  </nav>
+  <div class="topbar-actions">
+    <div class="nav-avatar" id="nav-avatar" onclick="window.location.href='profile.html'"></div>
+  </div>
+</div>
+
+<!-- ── Page ────────────────────────────────────────────── -->
+<div class="page-wrap">
+
+  <!-- Search -->
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search-input" type="text"
+      placeholder="Search posts, people, tags…"
+      oninput="handleSearch(this.value)"
+      onkeydown="if(event.key==='Enter')handleSearch(this.value)">
+  </div>
+
+  <!-- Tag filter pills -->
+  <div class="tag-cloud" id="tag-cloud">
+    <span class="tag-pill active" onclick="filterByTag('')">All</span>
+  </div>
+
+  <!-- Results info -->
+  <div id="search-info" style="color:var(--muted);font-size:13px;margin-bottom:14px"></div>
+
+  <!-- Posts Grid -->
+  <div id="explore-grid" class="post-grid" style="margin-bottom:32px"></div>
+
+  <!-- People section -->
+  <div class="sidebar-card">
+    <div class="sidebar-title">👥 People on MyGram</div>
+    <div id="people-list"></div>
+  </div>
+
+</div>
+
+<!-- Post detail modal -->
+<div class="modal-overlay" id="post-detail-modal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal-card" id="post-detail-content" style="max-width:520px"></div>
+</div>
+
+<script src="../js/storage.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/posts.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+requireAuth();
+const me = currentUser();
+
+// Nav avatar
+const navAv = document.getElementById('nav-avatar');
+navAv.textContent = avatarLetter(me);
+navAv.style.background = avatarColor(me);
+
+let activeTag = '';
+let searchQuery = '';
+
+// Build tag cloud
+function buildTagCloud() {
+  const posts = Storage.getPosts();
+  const counts = {};
+  posts.forEach(p => (p.tags||[]).forEach(t => counts[t] = (counts[t]||0)+1));
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,10);
+  const cloud = document.getElementById('tag-cloud');
+  const allPill = `<span class="tag-pill ${activeTag===''?'active':''}" onclick="filterByTag('')">All</span>`;
+  const tagPills = sorted.map(([t,c]) =>
+    `<span class="tag-pill ${activeTag===t?'active':''}" onclick="filterByTag('${t}')">#${t} <span style="opacity:0.5">${c}</span></span>`
+  ).join('');
+  cloud.innerHTML = allPill + tagPills;
+}
+
+// Filter by tag
+function filterByTag(tag) {
+  activeTag = tag;
+  searchQuery = '';
+  document.getElementById('search-input').value = '';
+  buildTagCloud();
+  renderExploreGrid();
+}
+
+// Render grid
+function renderExploreGrid() {
+  let posts = Storage.getPosts();
+
+  if (activeTag) {
+    posts = posts.filter(p => (p.tags||[]).includes(activeTag));
+    document.getElementById('search-info').textContent = `Showing posts tagged #${activeTag} (${posts.length})`;
+  } else if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    posts = posts.filter(p =>
+      p.text.toLowerCase().includes(q) ||
+      p.username.toLowerCase().includes(q) ||
+      (p.tags||[]).some(t => t.toLowerCase().includes(q))
+    );
+    document.getElementById('search-info').textContent = `${posts.length} result(s) for "${searchQuery}"`;
+  } else {
+    document.getElementById('search-info').textContent = `All posts (${posts.length})`;
+  }
+
+  const grid = document.getElementById('explore-grid');
+  if (posts.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--muted)">
+        <div style="font-size:40px;margin-bottom:12px">🔍</div>
+        <div>Nothing found. Try a different search.</div>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = posts.map(p => `
+    <div class="grid-post" onclick="openPostDetail('${p.id}')">
+      <span>${p.emoji || '✨'}</span>
+      <div class="grid-post-overlay">
+        <div class="grid-post-stat">❤️ ${(p.likes||[]).length}</div>
+        <div class="grid-post-stat">💬 ${(p.comments||[]).length}</div>
+      </div>
+    </div>`).join('');
+}
+
+// Handle search
+let _searchTimer;
+function handleSearch(q) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    searchQuery = q.trim();
+    activeTag = '';
+    buildTagCloud();
+    renderExploreGrid();
+    renderPeople();
+  }, 250);
+}
+
+// Render people
+function renderPeople() {
+  const list = document.getElementById('people-list');
+  let users = Storage.getUsers();
+  if (searchQuery) {
+    users = users.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase()));
+  }
+  if (users.length === 0) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:13px">No users found.</p>';
+    return;
+  }
+  list.innerHTML = users.map(u => {
+    const isMe = u.username === me;
+    const following = Storage.isFollowing(me, u.username);
+    const posts = Storage.getPostsByUser(u.username).length;
+    const followers = Storage.getFollowers(u.username).length;
+    return `
+    <div class="suggest-item">
+      <a href="profile.html?user=${u.username}" style="display:flex;align-items:center;gap:10px;flex:1">
+        <div class="avatar" style="width:44px;height:44px;font-size:18px;background:${avatarColor(u.username)}">${avatarLetter(u.username)}</div>
+        <div class="suggest-info">
+          <div class="suggest-name">${u.username} ${isMe ? '<span style="color:var(--muted);font-size:11px">(you)</span>' : ''}</div>
+          <div class="suggest-meta">${posts} posts · ${followers} followers</div>
+        </div>
+      </a>
+      ${!isMe ? `<button class="follow-btn ${following ? 'following' : ''}" id="exp-follow-${u.username}"
+        onclick="toggleExpFollow('${u.username}')">${following ? 'Following' : 'Follow'}</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleExpFollow(target) {
+  const nowFollowing = Storage.toggleFollow(me, target);
+  const btn = document.getElementById('exp-follow-' + target);
+  btn.textContent = nowFollowing ? 'Following' : 'Follow';
+  btn.classList.toggle('following', nowFollowing);
+  showToast(nowFollowing ? '✅ Following ' + target : '👋 Unfollowed ' + target);
+}
+
+// Post detail
+function openPostDetail(postId) {
+  const post = Storage.getPosts().find(p => p.id === postId);
+  if (!post) return;
+  document.getElementById('post-detail-content').innerHTML = buildPostCard(post);
+  document.getElementById('post-detail-modal').classList.add('show');
+}
+function closeDetailModal() {
+  document.getElementById('post-detail-modal').classList.remove('show');
+}
+
+// Check for ?tag= param
+const params = new URLSearchParams(window.location.search);
+const paramTag = params.get('tag');
+if (paramTag) { activeTag = paramTag; }
+
+// Init
+buildTagCloud();
+renderExploreGrid();
+renderPeople();
+</script>
+</body>
+</html>
