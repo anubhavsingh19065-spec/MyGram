@@ -23,27 +23,26 @@ function addEmoji(em) {
 
 // ── Publish Post ──────────────────────────────────────────
 function publishPost() {
-  const text = document.getElementById('post-text').value.trim();
-  if (!text) { showToast('✏️ Write something first!'); return; }
+  const user = JSON.parse(localStorage.getItem("user"));
+  const text = document.getElementById("post-text").value;
 
-  const emojis = ['🌟','✨','🔥','💫','🌊','🎉','🌙','⚡','🌸','🎵','🌈','🍀'];
-  const tags = (text.match(/#\w+/g) || []).map(t => t.slice(1));
+  if (!text.trim()) return alert("Write something!");
 
-  const post = {
-    id: 'p' + Date.now(),
-    username: currentUser(),
-    text,
-    emoji: emojis[Math.floor(Math.random() * emojis.length)],
-    tags,
-    likes: [],
-    comments: [],
-    createdAt: Date.now(),
-  };
-
-  Storage.addPost(post);
-  closePostModal();
-  showToast('🎉 Post shared!');
-  renderFeed();
+  fetch("https://mygram-1-ek8g.onrender.com/api/posts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: user.username,
+      content: text
+    })
+  })
+  .then(res => res.json())
+  .then(() => {
+    closePostModal();
+    renderFeed();
+  });
 }
 
 // ── Toggle Like ───────────────────────────────────────────

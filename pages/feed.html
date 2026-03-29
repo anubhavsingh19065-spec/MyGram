@@ -240,11 +240,35 @@ function setFeedTab(filter) {
 
 function goToMyProfile() { window.location.href = 'profile.html'; }
 
+
+//FEED///////////////////////////////////////////////
+/////////////////////////////////////////////////
+
+const BASE_URL = "https://mygram-1-ek8g.onrender.com";
+
+function renderFeed() {
+  fetch(`${BASE_URL}/api/posts`)
+    .then(res => res.json())
+    .then(posts => {
+      const container = document.getElementById("posts-feed");
+      container.innerHTML = "";
+
+      posts.reverse().forEach(post => {
+        container.innerHTML += `
+          <div class="sidebar-card" style="margin-bottom:16px">
+            <strong>${post.username}</strong>
+            <p style="margin-top:8px">${post.content}</p>
+          </div>
+        `;
+      });
+    });
+}
+
 // Init
 renderStories();
 renderSuggestions();
 renderTrending();
-renderFeed();
+
 </script>
 </body>
 </html>

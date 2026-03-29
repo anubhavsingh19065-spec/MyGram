@@ -140,3 +140,45 @@ window.timeAgo = timeAgo;
 window.buildAvatar = buildAvatar;
 window.seedDemoData = seedDemoData;
 window.setActiveNav = setActiveNav;
+const BASE_URL = "https://mygram-1-ek8g.onrender.com";
+
+function createPost() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const content = document.getElementById("post-content").value;
+
+  fetch(`${BASE_URL}/api/posts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: user.username,
+      content: content
+    })
+  })
+  .then(res => res.json())
+  .then(() => {
+    loadPosts();
+    document.getElementById("post-content").value = "";
+  });
+}
+
+function loadPosts() {
+  fetch(`${BASE_URL}/api/posts`)
+    .then(res => res.json())
+    .then(posts => {
+      const feed = document.getElementById("feed");
+      feed.innerHTML = "";
+
+      posts.reverse().forEach(p => {
+        feed.innerHTML += `
+          <div>
+            <strong>${p.username}</strong>
+            <p>${p.content}</p>
+          </div>
+        `;
+      });
+    });
+}
+
+loadPosts();
