@@ -1,7 +1,9 @@
 // ============================================================
-//  MyGram — auth.js
-//  Login, Signup, Logout logic
+//  MyGram — auth.js (FINAL WORKING VERSION)
 // ============================================================
+
+// 🔥 YOUR LIVE BACKEND URL
+const BASE_URL = "https://mygram-1-ek8g.onrender.com";
 
 // ── Tab Switcher ──────────────────────────────────────────
 function switchTab(tab) {
@@ -13,96 +15,104 @@ function switchTab(tab) {
 }
 window.switchTab = switchTab;
 
+// ── Helpers ───────────────────────────────────────────────
 function clearErrors() {
   document.querySelectorAll('.error-msg').forEach(el => el.textContent = '');
 }
 
 function showError(id, msg) {
   const el = document.getElementById(id);
-  if (el) { el.textContent = msg; el.classList.add('shake'); }
-  setTimeout(() => el && el.classList.remove('shake'), 400);
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('shake');
+    setTimeout(() => el.classList.remove('shake'), 400);
+  }
 }
 
-// ── Login ─────────────────────────────────────────────────
+// ── LOGIN ────────────────────────────────────────────────
 window.handleLogin = function () {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
 
-  fetch("http://localhost:8080/api/auth/login", {
+  if (!username || !password) {
+    return showError('login-error', 'Enter username & password');
+  }
+
+  fetch(`${BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      username: username,
-      password: password
-    })
+    body: JSON.stringify({ username, password })
   })
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error("Invalid credentials");
+    return res.json();
+  })
   .then(user => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-      alert("Login successful 🔥");
-      window.location.href = "feed.html";
-    } else {
-      alert("Invalid credentials ❌");
-    }
+    localStorage.setItem("user", JSON.stringify(user));
+    alert("Login successful 🔥");
+    window.location.href = "feed.html";
   })
   .catch(err => {
     console.error(err);
-    alert("Login error ❌");
+    showError('login-error', 'Login failed ❌');
   });
-}
+};
 
-// ── Signup ────────────────────────────────────────────────
+// ── SIGNUP ───────────────────────────────────────────────
 window.handleSignup = function () {
   const username = document.getElementById('signup-username').value.trim();
   const password = document.getElementById('signup-password').value;
   const confirm  = document.getElementById('signup-confirm').value;
 
   if (!username || !password) {
-    alert("Fill all fields");
-    return;
+    return showError('signup-error', 'Fill all fields');
   }
 
   if (password !== confirm) {
-    alert("Passwords do not match");
-    return;
+    return showError('signup-error', 'Passwords do not match');
   }
 
-  fetch("http://localhost:8080/api/auth/signup", {
+  fetch(`${BASE_URL}/api/auth/signup`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      username: username,
-      password: password,
+      username,
+      password,
       bio: ""
     })
   })
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error("Signup failed");
+    return res.json();
+  })
   .then(data => {
+    localStorage.setItem("user", JSON.stringify(data));
     alert("Signup successful ✅");
     window.location.href = "feed.html";
   })
   .catch(err => {
     console.error(err);
-    alert("Signup failed ❌");
+    showError('signup-error', 'Signup failed ❌');
   });
-}
+};
 
-// ── Logout ────────────────────────────────────────────────
-function handleLogout() {
-  Storage.clearSession();
-  window.location.href = 'login.html';
-}
+// ── LOGOUT ───────────────────────────────────────────────
+window.handleLogout = function () {
+  localStorage.removeItem("user");
+  window.location.href = "login.html";
+};
 
-// ── Enter key support ─────────────────────────────────────
+// ── ENTER KEY SUPPORT ─────────────────────────────────────
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
+
   const loginVisible  = document.getElementById('login-form')?.style.display !== 'none';
   const signupVisible = document.getElementById('signup-form')?.style.display !== 'none';
-  if (loginVisible)  handleLogin();
+
+  if (loginVisible) handleLogin();
   if (signupVisible) handleSignup();
 });
