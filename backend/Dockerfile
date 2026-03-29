@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests   # 🔥 FIX HERE
 
 CMD ["java", "-jar", "target/backend-0.0.1-SNAPSHOT.jar"]
