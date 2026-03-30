@@ -39,8 +39,8 @@
 
       <!-- Feed filter tabs -->
       <div class="feed-tabs">
-        <button class="feed-tab active" id="tab-all"       onclick="setFeedTab('all')">🌍 All Posts</button>
-        <button class="feed-tab"        id="tab-following" onclick="setFeedTab('following')">👥 Following</button>
+        <button class="feed-tab active" id="tab-all">
+        <button class="feed-tab" id="tab-following">
       </div>
 
       <!-- Create Post Bar -->
@@ -50,7 +50,7 @@
           <button class="form-input" style="cursor:pointer;text-align:left;color:var(--muted);padding:12px 16px" onclick="openPostModal()">
             What's on your mind?
           </button>
-          <button class="btn-primary" onclick="openPostModal()">Post</button>
+          <button class="btn-primary" onclick="publishPost()">Publish Post</button>
         </div>
       </div>
 
@@ -132,122 +132,50 @@
   </div>
 </div>
 
-<script src="../js/storage.js"></script>
-<script src="../js/app.js"></script>
-<script src="../js/posts.js"></script>
+<!-- <script src="../js/storage.js"></script>
+<script src="../js/app.js"></script> -->
 <script src="../js/auth.js"></script>
 <script>
-requireAuth();
-seedDemoData();
 
-const user = currentUser();
+// ✅ USER (GLOBAL)
+const user = localStorage.getItem("currentUser") || "anonymous";
 
-// Set nav avatar
-const navAv = document.getElementById('nav-avatar');
-navAv.textContent = avatarLetter(user);
-navAv.style.background = avatarColor(user);
+// ===== RUN AFTER LOAD =====
+document.addEventListener("DOMContentLoaded", () => {
 
-// Set sidebar
-const sideAv = document.getElementById('sidebar-avatar');
-sideAv.textContent = avatarLetter(user);
-sideAv.style.background = avatarColor(user);
-document.getElementById('sidebar-username').textContent = user;
-document.getElementById('sidebar-handle').textContent = '@' + user;
+  // NAV AVATAR
+  const navAv = document.getElementById("nav-avatar");
+  if (navAv) {
+    navAv.textContent = user.charAt(0).toUpperCase();
+    navAv.style.background = "#4f46e5";
+  }
 
-const crAv = document.getElementById('create-avatar');
-crAv.textContent = avatarLetter(user);
-crAv.style.background = avatarColor(user);
+  // SIDEBAR AVATAR
+  const sideAv = document.getElementById("sidebar-avatar");
+  if (sideAv) {
+    sideAv.textContent = user.charAt(0).toUpperCase();
+    sideAv.style.background = "#4f46e5";
+  }
 
-// Stats
-function updateSidebarStats() {
-  document.getElementById('stat-posts').textContent     = Storage.getPostsByUser(user).length;
-  document.getElementById('stat-followers').textContent = Storage.getFollowers(user).length;
-  document.getElementById('stat-following').textContent = Storage.getFollowing(user).length;
-}
-updateSidebarStats();
+  // SIDEBAR USER INFO
+  document.getElementById("sidebar-username").textContent = user;
+  document.getElementById("sidebar-handle").textContent = "@" + user;
 
-// Stories
-function renderStories() {
-  const track = document.getElementById('stories-track');
-  const myStory = `
-    <div class="story-item" onclick="openPostModal()">
-      <div class="story-ring">
-        <div class="story-inner" style="background:${avatarColor(user)};font-size:22px">${avatarLetter(user)}</div>
-      </div>
-      <div class="story-name">Your Story</div>
-    </div>`;
+  // CREATE AVATAR
+  const crAv = document.getElementById("create-avatar");
+  if (crAv) {
+    crAv.textContent = user.charAt(0).toUpperCase();
+    crAv.style.background = "#4f46e5";
+  }
 
-  const others = Storage.getUsers()
-    .filter(u => u.username !== user)
-    .slice(0, 7)
-    .map(u => `
-      <div class="story-item" onclick="showToast('📖 ${u.username}\\'s story')">
-        <div class="story-ring">
-          <div class="story-inner" style="background:${avatarColor(u.username)};font-size:18px">${avatarLetter(u.username)}</div>
-        </div>
-        <div class="story-name">${u.username}</div>
-      </div>`).join('');
+  // LOAD POSTS
+  renderFeed();
 
-  track.innerHTML = myStory + others;
-}
+});
 
-// Suggestions
-function renderSuggestions() {
-  const list = document.getElementById('suggestions-list');
-  const all = Storage.getUsers().filter(u => u.username !== user).slice(0, 4);
-  if (all.length === 0) { list.innerHTML = '<p style="color:var(--muted);font-size:13px">No users yet.</p>'; return; }
-  list.innerHTML = all.map(u => {
-    const following = Storage.isFollowing(user, u.username);
-    return `
-    <div class="suggest-item">
-      <div class="avatar" style="width:40px;height:40px;font-size:16px;background:${avatarColor(u.username)}">${avatarLetter(u.username)}</div>
-      <div class="suggest-info">
-        <div class="suggest-name">${u.username}</div>
-        <div class="suggest-meta">${Storage.getFollowers(u.username).length} followers</div>
-      </div>
-      <button class="follow-btn ${following ? 'following' : ''}" id="sugg-follow-${u.username}"
-        onclick="toggleSuggFollow('${u.username}')">${following ? 'Following' : 'Follow'}</button>
-    </div>`;
-  }).join('');
-}
-
-function toggleSuggFollow(target) {
-  const nowFollowing = Storage.toggleFollow(user, target);
-  const btn = document.getElementById('sugg-follow-' + target);
-  btn.textContent = nowFollowing ? 'Following' : 'Follow';
-  btn.classList.toggle('following', nowFollowing);
-  updateSidebarStats();
-  showToast(nowFollowing ? '✅ Following ' + target : '👋 Unfollowed ' + target);
-}
-
-// Trending tags
-function renderTrending() {
-  const posts = Storage.getPosts();
-  const counts = {};
-  posts.forEach(p => (p.tags||[]).forEach(t => counts[t] = (counts[t]||0)+1));
-  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,8);
-  const wrap = document.getElementById('trending-tags');
-  if (sorted.length === 0) { wrap.innerHTML = '<span class="tag">#mygram</span><span class="tag">#vibes</span>'; return; }
-  wrap.innerHTML = sorted.map(([t]) => `<span class="tag" onclick="window.location.href='explore.html?tag=${t}'">#${t}</span>`).join('');
-}
-
-// Feed tabs
-function setFeedTab(filter) {
-  document.getElementById('tab-all').classList.toggle('active', filter === 'all');
-  document.getElementById('tab-following').classList.toggle('active', filter === 'following');
-  renderFeed(filter);
-}
-
-function goToMyProfile() { window.location.href = 'profile.html'; }
-
-
-//FEED///////////////////////////////////////////////
-/////////////////////////////////////////////////
-
-const BASE_URL = "https://mygram-1-ek8g.onrender.com";
-
+// ===== LOAD POSTS =====
 function renderFeed() {
-  fetch(`${BASE_URL}/api/posts`)
+  fetch("https://mygram-1-ek8g.onrender.com/api/posts")
     .then(res => res.json())
     .then(posts => {
       const container = document.getElementById("posts-feed");
@@ -256,19 +184,139 @@ function renderFeed() {
       posts.reverse().forEach(post => {
         container.innerHTML += `
           <div class="sidebar-card" style="margin-bottom:16px">
+
             <strong>${post.username}</strong>
-            <p style="margin-top:8px">${post.content}</p>
+            <p>${post.content}</p>
+
+            <button onclick="deletePost(${post.id})"
+              style="margin-top:8px;background:red;color:white;border:none;padding:6px 10px;border-radius:6px">
+              🗑 Delete
+            </button>
+
+            <button onclick="likePost(${post.id})">
+              ❤️ ${post.likes ? post.likes.length : 0}
+            </button>
+
+            <div>
+              <input id="comment-${post.id}" placeholder="Write comment..." />
+              <button onclick="commentPost(${post.id})">Post</button>
+            </div>
+
+            <div>
+              ${(post.comments || []).map(c =>
+                `<p>💬 ${c}</p>`
+              ).join("")}
+            </div>
+
           </div>
         `;
       });
     });
 }
 
-// Init
-renderStories();
-renderSuggestions();
-renderTrending();
-renderFeed();
+// ===== LIKE =====
+function likePost(id) {
+  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}/like`, {
+    method: "POST"
+  }).then(() => renderFeed());
+}
+
+// ===== COMMENT =====
+function commentPost(id) {
+  const input = document.getElementById(`comment-${id}`);
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}/comment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(text)
+  }).then(() => {
+    input.value = "";
+    renderFeed();
+  });
+}
+
+// ===== CREATE POST =====
+function publishPost() {
+  const text = document.getElementById("post-text").value.trim();
+
+  if (!text) {
+    alert("Write something!");
+    return;
+  }
+
+  fetch("https://mygram-1-ek8g.onrender.com/api/posts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: user,
+      content: text
+    })
+  })
+  .then(res => res.json())
+  .then(() => {
+    document.getElementById("post-text").value = "";
+    closePostModal();
+    renderFeed();
+  })
+  .catch(err => console.error(err));
+}
+
+// ===== MODAL =====
+function openPostModal() {
+  document.getElementById("post-modal").style.display = "flex";
+}
+
+function closePostModal() {
+  document.getElementById("post-modal").style.display = "none";
+}
+
+// ===== EMOJI =====
+function addEmoji(emoji) {
+  const textarea = document.getElementById("post-text");
+  textarea.value += emoji;
+  textarea.focus();
+}
+
+// ===== DELETE =====
+function deletePost(id) {
+  if (!confirm("Delete this post?")) return;
+
+  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}`, {
+    method: "DELETE"
+  })
+  .then(() => renderFeed())
+  .catch(err => console.error(err));
+}
+function setFeedTab(type) {
+  document.getElementById('tab-all').classList.toggle('active', type === 'all');
+  document.getElementById('tab-following').classList.toggle('active', type === 'following');
+
+  // For now just reload all posts
+  renderFeed();
+}
+function goToMyProfile() {
+  window.location.href = "profile.html";
+}
+function loadPostCount() {
+  fetch("https://mygram-1-ek8g.onrender.com/api/posts")
+    .then(res => res.json())
+    .then(posts => {
+      const myPosts = posts.filter(p => 
+        p.username && user &&
+        p.username.trim().toLowerCase() === user.trim().toLowerCase()
+      );
+
+      const postEl = document.getElementById("stat-posts");
+      if (postEl) postEl.textContent = myPosts.length;
+    })
+    .catch(err => console.error("Post count error:", err));
+} loadPostCount();
+
 
 </script>
 </body>

@@ -157,8 +157,59 @@ function loadPosts() {
     })
     .catch(() => showToast("Failed to load posts ❌"));
 }
+function loadProfile() {
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (!user) return;
+
+  document.getElementById("profile-name").innerText = user.username;
+  document.getElementById("profile-username").innerText = "@" + user.username;
+  document.getElementById("profile-bio").innerText = user.bio || "No bio";
+}
+function toggleLike(postId) {
+  const posts = JSON.parse(localStorage.getItem("posts")) || [];
+  const user = localStorage.getItem("currentUser");
+
+  const post = posts.find(p => p.id === postId);
+
+  if (!post.likes) post.likes = [];
+
+  if (post.likes.includes(user)) {
+    post.likes = post.likes.filter(u => u !== user);
+  } else {
+    post.likes.push(user);
+  }
+
+  localStorage.setItem("posts", JSON.stringify(posts));
+
+  loadPosts();
+}
+
+function addComment(postId) {
+  const input = document.getElementById(`comment-${postId}`);
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  const posts = JSON.parse(localStorage.getItem("posts")) || [];
+  const post = posts.find(p => p.id === postId);
+
+  if (!post.comments) post.comments = [];
+
+  post.comments.push({
+    user: localStorage.getItem("currentUser"),
+    text: text
+  });
+
+  localStorage.setItem("posts", JSON.stringify(posts));
+
+  input.value = "";
+
+  loadPosts();
+}
 
 // 🔥 AUTO LOAD
 document.addEventListener("DOMContentLoaded", () => {
   loadPosts();
+  loadProfile();
 });

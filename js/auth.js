@@ -1,9 +1,9 @@
-// ============================================================
+
 //  MyGram — auth.js (FINAL WORKING VERSION)
 // ============================================================
 
 // 🔥 YOUR LIVE BACKEND URL
-const BASE_URL = "https://mygram-1-ek8g.onrender.com";
+// const BASE_URL = "https://mygram-1-ek8g.onrender.com";
 
 // ── Tab Switcher ──────────────────────────────────────────
 function switchTab(tab) {
@@ -91,6 +91,10 @@ window.handleSignup = function () {
   })
   .then(data => {
     localStorage.setItem("user", JSON.stringify(data));
+
+  // 🔥 ADD THIS LINE (MOST IMPORTANT)
+    localStorage.setItem("currentUser", data.username);
+
     alert("Signup successful ✅");
     window.location.href = "feed.html";
   })
