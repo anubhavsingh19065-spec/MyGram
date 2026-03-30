@@ -24,8 +24,14 @@ public class FollowController {
 
     // UNFOLLOW
     @DeleteMapping
-    public void unfollow(@RequestParam String follower, @RequestParam String following) {
-        repo.deleteByFollowerAndFollowing(follower, following);
+    public String unfollow(@RequestParam String follower, @RequestParam String following) {
+    List<Follow> list = repo.findByFollower(follower);
+
+        list.stream()
+            .filter(f -> f.getFollowing().equals(following))
+            .forEach(repo::delete);
+
+        return "Unfollowed";
     }
 
     // GET FOLLOWERS

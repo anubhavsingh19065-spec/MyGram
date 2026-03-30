@@ -185,7 +185,14 @@ function renderFeed() {
         container.innerHTML += `
           <div class="sidebar-card" style="margin-bottom:16px">
 
+            <div style="display:flex;justify-content:space-between;align-items:center">
             <strong>${post.username}</strong>
+            ${post.username !== user ? `
+            <button onclick="toggleFollow('${post.username}')">
+                  Follow
+            </button>
+            ` : ""}
+            </div>
             <p>${post.content}</p>
 
             <button onclick="deletePost(${post.id})"
@@ -315,7 +322,49 @@ function loadPostCount() {
       if (postEl) postEl.textContent = myPosts.length;
     })
     .catch(err => console.error("Post count error:", err));
-} loadPostCount();
+}
+ loadPostCount();
+// ===== FOLLOW SYSTEM =====
+
+// FOLLOW
+function followUser(target) {
+  fetch("https://mygram-1-ek8g.onrender.com/api/follow", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      follower: user,
+      following: target
+    })
+  }).then(() => renderFeed());
+}
+
+// UNFOLLOW
+function unfollowUser(target) {
+  fetch(`https://mygram-1-ek8g.onrender.com/api/follow?follower=${user}&following=${target}`, {
+    method: "DELETE"
+  }).then(() => renderFeed());
+}
+
+// CHECK FOLLOW
+async function isFollowing(target) {
+  const res = await fetch(`https://mygram-1-ek8g.onrender.com/api/follow/followers/${target}`);
+  const data = await res.json();
+  return data.some(f => f.follower === user);
+}
+
+// TOGGLE FOLLOW
+async function toggleFollow(target) {
+  if (target === user) return;
+
+  const following = await isFollowing(target);
+
+  if (following) {
+    unfollowUser(target);
+  } else {
+    followUser(target);
+  }
+}
+
 
 
 </script>
