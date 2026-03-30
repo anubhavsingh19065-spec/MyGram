@@ -1,6 +1,7 @@
 package com.anubhav.mygram.backend.model;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 public class Post {
@@ -12,11 +13,47 @@ public class Post {
     private String username;
     private String content;
 
-    public Long getId() { return id; }
+    // 🔥 ADD THESE
+    private Integer likes;
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    @ElementCollection
+    private List<String> comments;
 
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    // ✅ GETTERS & SETTERS
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public Integer getLikes() {
+        return likes;
+    }
+
+    public void setLikes(Integer likes) {
+        this.likes = likes;
+    }
+
+    public List<String> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<String> comments) {
+        this.comments = comments;
+    }
 }
