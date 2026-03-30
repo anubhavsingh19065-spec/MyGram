@@ -176,42 +176,55 @@ function renderFeed() {
     .then(res => res.json())
     .then(posts => {
 
+      console.log("Posts:", posts); // DEBUG
+
       const container = document.getElementById("posts-feed");
-      if (!container) return;
+
+      if (!container) {
+        console.error("posts-feed not found ❌");
+        return;
+      }
 
       container.innerHTML = "";
 
-      const reversedPosts = posts.slice().reverse();
+      if (!posts || posts.length === 0) {
+        container.innerHTML = "<p>No posts yet</p>";
+        return;
+      }
 
-      reversedPosts.forEach(post => {
+      posts.reverse().forEach(post => {
+
         container.innerHTML += `
-          <div class="sidebar-card" style="margin-bottom:16px">
+          <div style="border:1px solid #444;padding:10px;margin:10px">
 
-            <div style="display:flex;justify-content:space-between">
-              <strong style="cursor:pointer"
-                onclick="openUserProfile('${post.username}')">
-                ${post.username}
-              </strong>
+            <strong>${post.username || "unknown"}</strong>
 
-              ${post.username !== user ? 
-                `<button id="follow-${post.username}"
-                  onclick="toggleFollow('${post.username}')">
-                  Follow
-                </button>`
-               : ""}
-            </div>
-
-            <p>${post.content}</p>
+            <p>${post.content || ""}</p>
 
             <button onclick="likePost(${post.id})">
-              ❤️ ${post.likes ? post.likes.length : 0}
+              ❤️ ${Array.isArray(post.likes) ? post.likes.length : (post.likes || 0)}
             </button>
+
+            <div>
+              <input id="comment-${post.id}" placeholder="Write comment..." />
+              <button onclick="commentPost(${post.id})">Post</button>
+            </div>
+
+            <div>
+              ${
+                Array.isArray(post.comments)
+                  ? post.comments.map(c => `<p>💬 ${c}</p>`).join("")
+                  : ""
+              }
+            </div>
 
           </div>
         `;
       });
 
-      updateFollowButtons(reversedPosts);
+    })
+    .catch(err => {
+      console.error("Fetch error:", err);
     });
 }
 
@@ -219,12 +232,21 @@ function renderFeed() {
 function likePost(id) {
   fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}/like`, {
     method: "POST"
-  }).then(() => renderFeed());
+  })
+  .then(() => renderFeed())
+  .catch(err => console.error("Like error:", err));
 }
 
 // ===== CREATE POST =====
 function publishPost() {
-  const text = document.getElementById("post-text").value.trim();
+  const textarea = document.getElementById("post-text");
+
+  if (!textarea) {
+    alert("Post box not found ❌");
+    return;
+  }
+
+  const text = textarea.value.trim();
 
   if (!text) {
     alert("Write something!");
@@ -233,15 +255,23 @@ function publishPost() {
 
   fetch("https://mygram-1-ek8g.onrender.com/api/posts", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
       username: user,
       content: text
     })
   })
+  .then(res => res.json())
   .then(() => {
-    document.getElementById("post-text").value = "";
+    textarea.value = "";
+    alert("Posted ✅");
     renderFeed();
+  })
+  .catch(err => {
+    console.error("Post error:", err);
+    alert("Post failed ❌");
   });
 }
 
@@ -335,7 +365,51 @@ async function loadFollowingCount() {
 function openUserProfile(username) {
   window.location.href = `profile.html?user=${username}`;
 }
+function goToMyProfile() {
+  window.location.href = "profile.html";
+}
+function openPostModal() {
+  const modal = document.getElementById("post-modal");
 
+  if (!modal) {
+    console.error("Modal not found ❌");
+    return;
+  }
+
+  modal.style.display = "flex";
+}
+function closePostModal() {
+  const modal = document.getElementById("post-modal");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+function commentPost(id) {
+  const input = document.getElementById(`comment-${id}`);
+
+  if (!input) {
+    console.error("Comment input not found ❌");
+    return;
+  }
+
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}/comment`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(text)
+  })
+  .then(() => {
+    input.value = "";
+    renderFeed();
+  })
+  .catch(err => console.error("Comment error:", err));
+}
 </script>
 </body>
 </html>
