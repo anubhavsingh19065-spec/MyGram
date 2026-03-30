@@ -137,87 +137,81 @@
 <script src="../js/auth.js"></script>
 <script>
 
-// ✅ USER (GLOBAL)
+// ===== USER =====
 const user = localStorage.getItem("currentUser") || "anonymous";
 
-// ===== RUN AFTER LOAD =====
+// ===== INIT =====
 document.addEventListener("DOMContentLoaded", () => {
+  renderFeed();
+  loadPostCount();
+  loadFollowerCount();
+  loadFollowingCount();
 
-  // NAV AVATAR
   const navAv = document.getElementById("nav-avatar");
   if (navAv) {
     navAv.textContent = user.charAt(0).toUpperCase();
     navAv.style.background = "#4f46e5";
   }
-
-  // SIDEBAR AVATAR
-  const sideAv = document.getElementById("sidebar-avatar");
-  if (sideAv) {
-    sideAv.textContent = user.charAt(0).toUpperCase();
-    sideAv.style.background = "#4f46e5";
-  }
-
-  // SIDEBAR USER INFO
-  document.getElementById("sidebar-username").textContent = user;
-  document.getElementById("sidebar-handle").textContent = "@" + user;
-
-  // CREATE AVATAR
-  const crAv = document.getElementById("create-avatar");
-  if (crAv) {
-    crAv.textContent = user.charAt(0).toUpperCase();
-    crAv.style.background = "#4f46e5";
-  }
-
-  // LOAD POSTS
-  renderFeed();
-
 });
+// ===== SIDEBAR PROFILE FIX =====
 
-// ===== LOAD POSTS =====
+// avatar
+const sideAv = document.getElementById("sidebar-avatar");
+if (sideAv) {
+  sideAv.textContent = user.charAt(0).toUpperCase();
+  sideAv.style.background = "#4f46e5";
+}
+
+// username
+const sideName = document.getElementById("sidebar-username");
+if (sideName) sideName.textContent = user;
+
+// handle
+const sideHandle = document.getElementById("sidebar-handle");
+if (sideHandle) sideHandle.textContent = "@" + user;
+
+// ===== FEED =====
 function renderFeed() {
   fetch("https://mygram-1-ek8g.onrender.com/api/posts")
     .then(res => res.json())
     .then(posts => {
+
       const container = document.getElementById("posts-feed");
+      if (!container) return;
+
       container.innerHTML = "";
 
-      posts.reverse().forEach(post => {
+      const reversedPosts = posts.slice().reverse();
+
+      reversedPosts.forEach(post => {
         container.innerHTML += `
           <div class="sidebar-card" style="margin-bottom:16px">
 
-            <div style="display:flex;justify-content:space-between;align-items:center">
-            <strong>${post.username}</strong>
-            ${post.username !== user ? `
-            <button onclick="toggleFollow('${post.username}')">
-                  Follow
-            </button>
-            ` : ""}
-            </div>
-            <p>${post.content}</p>
+            <div style="display:flex;justify-content:space-between">
+              <strong style="cursor:pointer"
+                onclick="openUserProfile('${post.username}')">
+                ${post.username}
+              </strong>
 
-            <button onclick="deletePost(${post.id})"
-              style="margin-top:8px;background:red;color:white;border:none;padding:6px 10px;border-radius:6px">
-              🗑 Delete
-            </button>
+              ${post.username !== user ? 
+                `<button id="follow-${post.username}"
+                  onclick="toggleFollow('${post.username}')">
+                  Follow
+                </button>`
+               : ""}
+            </div>
+
+            <p>${post.content}</p>
 
             <button onclick="likePost(${post.id})">
               ❤️ ${post.likes ? post.likes.length : 0}
             </button>
 
-            <div>
-              <input id="comment-${post.id}" placeholder="Write comment..." />
-              <button onclick="commentPost(${post.id})">Post</button>
-            </div>
-
-            <div>
-              ${(post.comments || []).map(c =>
-                `<p>💬 ${c}</p>`
-              ).join("")}
-            </div>
-
           </div>
         `;
       });
+
+      updateFollowButtons(reversedPosts);
     });
 }
 
@@ -226,23 +220,6 @@ function likePost(id) {
   fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}/like`, {
     method: "POST"
   }).then(() => renderFeed());
-}
-
-// ===== COMMENT =====
-function commentPost(id) {
-  const input = document.getElementById(`comment-${id}`);
-  const text = input.value.trim();
-
-  if (!text) return;
-
-  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}/comment`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(text)
-  }).then(() => {
-    input.value = "";
-    renderFeed();
-  });
 }
 
 // ===== CREATE POST =====
@@ -256,116 +233,108 @@ function publishPost() {
 
   fetch("https://mygram-1-ek8g.onrender.com/api/posts", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
       username: user,
       content: text
     })
   })
-  .then(res => res.json())
   .then(() => {
     document.getElementById("post-text").value = "";
-    closePostModal();
     renderFeed();
-  })
-  .catch(err => console.error(err));
+  });
 }
 
-// ===== MODAL =====
-function openPostModal() {
-  document.getElementById("post-modal").style.display = "flex";
-}
-
-function closePostModal() {
-  document.getElementById("post-modal").style.display = "none";
-}
-
-// ===== EMOJI =====
-function addEmoji(emoji) {
-  const textarea = document.getElementById("post-text");
-  textarea.value += emoji;
-  textarea.focus();
-}
-
-// ===== DELETE =====
-function deletePost(id) {
-  if (!confirm("Delete this post?")) return;
-
-  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}`, {
-    method: "DELETE"
-  })
-  .then(() => renderFeed())
-  .catch(err => console.error(err));
-}
-function setFeedTab(type) {
-  document.getElementById('tab-all').classList.toggle('active', type === 'all');
-  document.getElementById('tab-following').classList.toggle('active', type === 'following');
-
-  // For now just reload all posts
-  renderFeed();
-}
-function goToMyProfile() {
-  window.location.href = "profile.html";
-}
-function loadPostCount() {
-  fetch("https://mygram-1-ek8g.onrender.com/api/posts")
-    .then(res => res.json())
-    .then(posts => {
-      const myPosts = posts.filter(p => 
-        p.username && user &&
-        p.username.trim().toLowerCase() === user.trim().toLowerCase()
-      );
-
-      const postEl = document.getElementById("stat-posts");
-      if (postEl) postEl.textContent = myPosts.length;
-    })
-    .catch(err => console.error("Post count error:", err));
-}
- loadPostCount();
-// ===== FOLLOW SYSTEM =====
-
-// FOLLOW
+// ===== FOLLOW =====
 function followUser(target) {
-  fetch("https://mygram-1-ek8g.onrender.com/api/follow", {
+  return fetch("https://mygram-1-ek8g.onrender.com/api/follow", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
       follower: user,
       following: target
     })
-  }).then(() => renderFeed());
+  });
 }
 
-// UNFOLLOW
 function unfollowUser(target) {
-  fetch(`https://mygram-1-ek8g.onrender.com/api/follow?follower=${user}&following=${target}`, {
+  return fetch(`https://mygram-1-ek8g.onrender.com/api/follow?follower=${user}&following=${target}`, {
     method: "DELETE"
-  }).then(() => renderFeed());
+  });
 }
 
-// CHECK FOLLOW
-async function isFollowing(target) {
-  const res = await fetch(`https://mygram-1-ek8g.onrender.com/api/follow/followers/${target}`);
-  const data = await res.json();
-  return data.some(f => f.follower === user);
-}
-
-// TOGGLE FOLLOW
 async function toggleFollow(target) {
   if (target === user) return;
 
-  const following = await isFollowing(target);
+  const res = await fetch(
+    `https://mygram-1-ek8g.onrender.com/api/follow/followers/${target}`
+  );
 
-  if (following) {
-    unfollowUser(target);
+  const data = await res.json();
+  const isFollowing = data.some(f => f.follower === user);
+
+  if (isFollowing) {
+    await unfollowUser(target);
   } else {
-    followUser(target);
+    await followUser(target);
+  }
+
+  renderFeed();
+}
+
+// ===== UPDATE BUTTON =====
+async function updateFollowButtons(posts) {
+  for (let post of posts) {
+
+    if (post.username === user) continue;
+
+    const res = await fetch(
+      `https://mygram-1-ek8g.onrender.com/api/follow/followers/${post.username}`
+    );
+
+    const data = await res.json();
+    const isFollowing = data.some(f => f.follower === user);
+
+    const btn = document.getElementById(`follow-${post.username}`);
+
+    if (btn) {
+      btn.textContent = isFollowing ? "Following" : "Follow";
+      btn.style.background = isFollowing ? "#444" : "#4f46e5";
+      btn.style.color = "white";
+    }
   }
 }
 
+// ===== COUNTS =====
+function loadPostCount() {
+  fetch("https://mygram-1-ek8g.onrender.com/api/posts")
+    .then(res => res.json())
+    .then(posts => {
+      const myPosts = posts.filter(p => p.username === user);
+      document.getElementById("stat-posts").textContent = myPosts.length;
+    });
+}
 
+async function loadFollowerCount() {
+  const res = await fetch(
+    `https://mygram-1-ek8g.onrender.com/api/follow/followers/${user}`
+  );
+  const data = await res.json();
+  document.getElementById("stat-followers").textContent = data.length;
+}
+
+async function loadFollowingCount() {
+  const res = await fetch(
+    `https://mygram-1-ek8g.onrender.com/api/follow/following/${user}`
+  );
+  const data = await res.json();
+  document.getElementById("stat-following").textContent = data.length;
+}
+
+// ===== NAVIGATION =====
+function openUserProfile(username) {
+  window.location.href = `profile.html?user=${username}`;
+}
 
 </script>
 </body>

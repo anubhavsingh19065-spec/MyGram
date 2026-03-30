@@ -64,114 +64,41 @@
 <script src="../js/auth.js"></script>
 
 <script>
-// requireAuth();
 
-const me = localStorage.getItem("currentUser") || "anonymous";
-
-// FIXED ❗
+// ===== USER =====
 const params = new URLSearchParams(window.location.search);
-const viewUser = params.get('user') || me;
-const isOwnProfile = viewUser === me;
+const user = params.get("user") || localStorage.getItem("currentUser") || "anonymous";
 
-// Avatar
-const navAv = document.getElementById('nav-avatar');
-navAv.textContent = me.charAt(0).toUpperCase();
-navAv.style.background = "#4f46e5";
+console.log("Profile user:", user);
 
-// HEADER
-function renderProfileHeader() {
-  const userData = Storage.findUser(viewUser) || { username: viewUser, bio: '' };
-  const posts = Storage.getPostsByUser(viewUser);
-  const followers = Storage.getFollowers(viewUser);
-  const following = Storage.getFollowing(viewUser);
+// ===== INIT =====
+document.addEventListener("DOMContentLoaded", () => {
 
-  document.getElementById('profile-avatar-lg').textContent = avatarLetter(viewUser);
-  document.getElementById('profile-avatar-lg').style.background = avatarColor(viewUser);
+  document.getElementById("profile-username").textContent = user;
+  document.getElementById("profile-handle").textContent = "@" + user;
 
-  document.getElementById('profile-username').textContent = viewUser;
-  document.getElementById('profile-handle').textContent = '@' + viewUser;
-  document.getElementById('profile-bio').textContent = userData.bio || '';
-
-  document.getElementById('profile-post-count').textContent = posts.length;
-  document.getElementById('profile-follower-count').textContent = followers.length;
-  document.getElementById('profile-following-count').textContent = following.length;
-
-  const actions = document.getElementById('profile-actions');
-
-  if (isOwnProfile) {
-    actions.innerHTML = `<button onclick="toggleEditBio()">Edit Bio</button>`;
-  } else {
-    const isFollowing = Storage.isFollowing(me, viewUser);
-    actions.innerHTML = 
-      `<button onclick="toggleFollow()" id="followBtn">
-        ${isFollowing ? 'Following' : 'Follow'}
-      </button>`;
-  }
-}
-
-// FOLLOW
-function toggleFollow() {
-  const now = Storage.toggleFollow(me, viewUser);
-  document.getElementById('followBtn').textContent = now ? 'Following' : 'Follow';
-}
-
-// EDIT BIO
-function toggleEditBio() {
-  const el = document.getElementById('edit-bio-wrap');
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-function saveBio() {
-  const bio = document.getElementById('bio-input').value;
-  const users = Storage.getUsers();
-  const i = users.findIndex(u => u.username === me);
-  if (i !== -1) {
-    users[i].bio = bio;
-    Storage.saveUsers(users);
+  const avatar = document.getElementById("profile-avatar-lg");
+  if (avatar) {
+    avatar.textContent = user.charAt(0).toUpperCase();
+    avatar.style.background = "#4f46e5";
   }
 
-  document.getElementById('profile-bio').textContent = bio;
-  document.getElementById('edit-bio-wrap').style.display = 'none';
-}
+  loadProfilePosts();
+  loadFollowerCount();
+  loadFollowingCount();
+});
 
-// POSTS
-function loadProfile() {
-  const user = localStorage.getItem("currentUser") || "anonymous";
-
-  console.log("User:", user);
-
-  document.getElementById("profile-username").innerText = user;
-
+// ===== POSTS =====
+function loadProfilePosts() {
   fetch("https://mygram-1-ek8g.onrender.com/api/posts")
     .then(res => res.json())
     .then(posts => {
-      console.log("All posts:", posts);
 
       const myPosts = posts.filter(p => p.username === user);
 
-      console.log("My posts:", myPosts);
-
-      document.getElementById("profile-post-count").innerText = myPosts.length;
-    });
-}
-
-
-function renderProfileGrid() {
-  const user = localStorage.getItem("currentUser") || "anonymous";
-
-  fetch("https://mygram-1-ek8g.onrender.com/api/posts")
-    .then(res => res.json())
-    .then(posts => {
-      const myPosts = posts.filter(p => p.username === user);
+      document.getElementById("profile-post-count").textContent = myPosts.length;
 
       const grid = document.getElementById("profile-grid");
-
-      console.log("Rendering posts:", myPosts);
-
-      if (!grid) {
-        console.error("profile-grid not found ❌");
-        return;
-      }
 
       if (myPosts.length === 0) {
         document.getElementById("profile-no-posts").style.display = "block";
@@ -181,62 +108,30 @@ function renderProfileGrid() {
 
       document.getElementById("profile-no-posts").style.display = "none";
 
-      grid.innerHTML = myPosts.map(p => `
-        <div style="border:1px solid #444;padding:10px;margin:5px">
+      grid.innerHTML = myPosts.map(p => 
+        `<div style="border:1px solid #444;padding:10px;margin:5px">
           ${p.content}
-        </div>
-      `).join('');
+        </div>`
+      ).join('');
     });
 }
 
-
-// INIT
-loadProfile();
-renderProfileGrid();
-function deletePost(id) {
-  fetch(`https://mygram-1-ek8g.onrender.com/api/posts/${id}`, {
-    method: "DELETE"
-  })
-  .then(() => {
-    renderProfileGrid();
-    loadProfile(); // update count
-  });
-}
-// ===== BASIC USER =====
-
-// ===== AUTH CHECK (optional) =====
-function requireAuth() {
-  const user = localStorage.getItem("currentUser");
-  if (!user) {
-    alert("Login first");
-    window.location.href = "login.html";
-  }
+// ===== FOLLOW COUNTS =====
+async function loadFollowerCount() {
+  const res = await fetch(
+    `https://mygram-1-ek8g.onrender.com/api/follow/followers/${user}`
+  );
+  const data = await res.json();
+  document.getElementById("profile-follower-count").textContent = data.length;
 }
 
-// ===== AVATAR =====
-function avatarLetter(name) {
-  return name ? name.charAt(0).toUpperCase() : "?";
+async function loadFollowingCount() {
+  const res = await fetch(
+    `https://mygram-1-ek8g.onrender.com/api/follow/following/${user}`
+  );
+  const data = await res.json();
+  document.getElementById("profile-following-count").textContent = data.length;
 }
-
-function avatarColor(name) {
-  const colors = ["#ff6b6b", "#6bcB77", "#4d96ff", "#feca57"];
-  return colors[name.length % colors.length];
-}
-
-// ===== SIMPLE TOAST =====
-function showToast(msg) {
-  alert(msg); // simple for now
-}
-
-// ===== FOLLOW (dummy for now) =====
-function toggleProfileFollow() {
-  alert("Follow feature coming soon");
-}
-
-// INIT
-renderProfileHeader();
-renderProfileGrid();
-loadProfile();
 
 </script>
 
